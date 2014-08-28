@@ -10,24 +10,25 @@ bool timer2_active;
 // BUTTON
 bool button_active;
 bool previous_state;
-int BUT_PIN;
-
+int button_pin;
 
 void button_listen(int pin) {
 
 	pinMode(pin,INPUT);
 	BUT_PIN = pin;
+	button_active = 1;
 }
 
-void timer_set (int ms) {
-	if(!timer1_active){
-		timer1 = millis() + ms;
-		timer1_active = 1;
-	}
-	if(!timer2_active){
-		timer2 = millis() + ms;
-		timer2_active = 1;
-	}
+void timer1_set (int ms) {
+	
+	timer1 = millis() + ms;
+	timer1_active = 1;
+	
+}
+void timer2_set (int ms) {
+
+	timer2 = millis() + ms;
+	timer2_active = 1;
 }
 
 void button_changed (int pin, int v);
@@ -39,7 +40,7 @@ void setup () {
 	timer2_active = 0;
 	button_active = 0;
 	previous_state = 0;
-	init();	
+	init();
 }
 
 void loop () {
