@@ -1,5 +1,9 @@
 // event_driven.c
 
+#include <string.h>
+
+#define MAX_BUTTONS 5
+
 // TIMER
 unsigned int timer1;
 unsigned int timer2;
@@ -8,15 +12,15 @@ bool timer2_active;
 
 
 // BUTTON
-bool button_active;
-bool previous_state;
-int button_pin;
+int buttons;
+int previous_state[MAX_BUTTONS];
+int button_pin[MAX_BUTTONS];
 
 void button_listen(int pin) {
 
 	pinMode(pin,INPUT);
-	BUT_PIN = pin;
-	button_active = 1;
+	button_pin[buttons] = pin;
+	buttons = buttons + 1;
 }
 
 void timer1_set (int ms) {
@@ -38,18 +42,21 @@ void timer_expired ();
 void setup () {
 	timer1_active = 0;
 	timer2_active = 0;
-	button_active = 0;
-	previous_state = 0;
+	buttons = 0;
+	memset(previous_state,0,MAX_BUTTONS);
 	init();
 }
 
 void loop () {
 	
-	if (button_active){
-		bool current_state = digitalRead(BUT_PIN);
-		if (current_state != previous_state){
-			button_changed (BUT_PIN, current_state);
-			previous_state = current_state;
+	if (buttons > 0){
+		int i;
+		for(i=0;i<buttons;i++) {
+			bool current_state = digitalRead(button_pin[i]);
+			if (current_state != previous_state[i]){
+				button_changed (button_pin[i], current_state);
+				previous_state[i] = current_state;
+			}
 		}
 	}
 
