@@ -36,8 +36,8 @@ void timer2_set (int ms) {
 }
 
 void button_changed (int pin, int v);
-void timer_expired ();
-
+void timer1_expired ();
+void timer2_expired ();
 
 void setup () {
 	timer1_active = 0;
