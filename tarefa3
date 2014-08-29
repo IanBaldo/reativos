@@ -1,0 +1,63 @@
+#include "event_driven.c"
+
+#define LED1_PIN 13
+#deinfe LED2_PIN 12
+#define BUT1_PIN 1
+#define BUT2_PIN 2
+
+int led_freq; 	// LED frequency
+bool button1_pressed;
+bool button2_pressed;
+
+void init() {
+	pinMode(LED1_PIN,OUTPUT);
+	pinMode(LED2_PIN,OUTPUT);
+	
+	button_listen(BUT1_PIN);
+	button_listen(BUT2_PIN);
+
+	led_freq = 1000;
+	button1_pressed = 0;
+	button2_pressed = 0;
+
+	timer1_set(led_freq);
+}
+
+void button_changed(int pin, int v){
+	if (pin == BUT1_PIN){
+		// button 1
+		led_freq = led_freq + 100;
+		button1_pressed = 1;
+
+		if (button2_pressed)
+			while(1);
+		else {
+			timer_active = 1;
+			timer2_set(500);
+		}
+	}
+	else {
+		// button 2
+		led_freq = led_freq - 100;
+		button2_pressed = 1;
+
+		if (button1_pressed)
+			while(1);
+		else {
+			timer_active = 1;
+			timer2_set(500);
+		}
+	}
+}
+
+void timer2_expired(){
+	button1_pressed = 0;
+	button2_pressed = 0;
+}
+
+void timer1_expired(){
+	digitalWrite(LED1_PIN,state);
+	digitalWrite(LED2_PIN,state);
+	state = !state;
+	timer1_set(led_freq);
+}
