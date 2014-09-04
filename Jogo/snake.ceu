@@ -215,7 +215,7 @@ with
 			var int food_y = (_rand()%(MAX_ROWS-2)) + 1;
 
 			var int food_pos = XY(food_x,food_y);
-			if (world[food_pos] != 'w' or world[food_pos] != 's') then
+			if (world[food_pos] != 'w' and world[food_pos] != 's') then
 				world[food_pos] = 'f';
 				
 				block.x = food_x*BLOCK_WIDTH;
