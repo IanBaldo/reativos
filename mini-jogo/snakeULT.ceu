@@ -1,0 +1,307 @@
+#include "sdl.ceu"
+
+native _printf();
+
+#define BLOCK_WIDTH	10
+#define BLOCK_HEIGHT	10
+#define MAX_ROWS 	40
+#define MAX_COLS	40
+#define ROWS_COLS	1600
+#define XY(x,y)		((x*MAX_COLS)+y)
+
+input void SDL_REDRAW;
+input void SDL_QUIT;
+input _SDL_KeyboardEvent*    SDL_KEYDOWN;
+
+var int win_w;
+var int win_h;
+var char[ROWS_COLS] world;
+var int[ROWS_COLS] snakeTrack_x;  // keeps track of the body position 
+var int[ROWS_COLS] snakeTrack_y;
+var int rock_count = 0;
+var int active_hammer = 0;
+
+var _SDL_Window* win;
+    finalize
+        win = _SDL_CreateWindow("Snake",
+                            800, 50, 400, 400, _SDL_WINDOW_SHOWN);
+    with
+        _SDL_DestroyWindow(win);
+    end
+
+_SDL_GetWindowSize(win, &win_w, &win_h);
+
+var _SDL_Renderer* ren;
+    finalize
+        ren = _SDL_CreateRenderer(win, -1, 0);
+    with
+        _SDL_DestroyRenderer(ren);
+    end
+
+// =====================         INITIALIZATION        ==============================
+
+interface Global with
+	var char[ROWS_COLS] world;
+	var int[ROWS_COLS] snakeTrack_x;  // keeps track of the body position 
+	var int[ROWS_COLS] snakeTrack_y;
+	var int rock_count;
+	var int active_hammer;
+end;
+
+var _SDL_Rect bg;
+    bg.w = win_w;
+    bg.h = win_h;
+    bg.x = 0;
+    bg.y = 0;
+
+var _SDL_Color bg_clr;
+    bg_clr.r = 0x01;
+    bg_clr.g = 0x01;
+    bg_clr.b = 0x01;
+
+var _SDL_Rect block;	// general use block
+    	 block.w = BLOCK_WIDTH;
+    	 block.h = BLOCK_HEIGHT;
+    	 block.x = 0;
+    	 block.y = 0;
+
+
+var _SDL_Color wall_clr;	// white
+	wall_clr.r = 0xFF;
+	wall_clr.g = 0xFF;
+	wall_clr.b = 0xFF;
+
+var _SDL_Color snake_clr;	// dark green
+	snake_clr.r = 0x00;
+	snake_clr.g = 0xA0;
+	snake_clr.b = 0x00;
+
+var _SDL_Color food_clr;	// blue
+	food_clr.r = 0x00;
+	food_clr.g = 0x00;
+	food_clr.b = 0xF0;
+
+class Rock with
+	var int rock_x;
+	var int rock_y;
+do
+	var int pos = XY(rock_x,rock_y);
+	if(global:world[pos] != 'w' and global:world[pos] != 's' and global:world[pos] != 'f' and global:world[pos] != 'r') then
+		global:world[pos] = 'r';
+	end 
+end
+
+class Hammer with
+	var int hammer_x;
+	var int hammer_y;
+do
+	var int pos = XY(hammer_x, hammer_y);
+	if(global:world[pos] != 'w' and global:world[pos] != 's' and global:world[pos] != 'f' and global:world[pos] != 'r') then
+		global:world[pos] = 'h';
+	end
+end;
+
+class Snake with
+	event void comeu; 
+	event void revive;
+	var char movement = 'R';
+	var int ate = 0;
+	var int snakeHead_x = 2;
+	var int snakeHead_y = 2;
+	var int tailIndex = 0;
+	var int headIndex = 0;
+	var int score = 0;
+do
+
+    await 10ms;
+ 	emit comeu;
+    loop do	
+		par/or do //movement keyboard
+			var _SDL_KeyboardEvent* key;
+			every key in SDL_KEYDOWN do
+	    		if key:keysym.sym == _SDLK_UP then
+	      		    movement = 'U';
+	   			 else/if key:keysym.sym == _SDLK_DOWN then
+	    		    movement = 'D';
+	   			 else/if key:keysym.sym == _SDLK_LEFT then
+	    		    movement = 'L';
+	   			 else/if key:keysym.sym == _SDLK_RIGHT then
+	    		    movement = 'R';
+	   			 end
+	   	 	end
+		with // timeout
+		await 50ms;
+		end
+		// keep moving
+		if (movement == 'U') then
+			snakeHead_y = snakeHead_y - 1;
+		else/if (movement == 'D') then
+			snakeHead_y = snakeHead_y + 1;
+		else/if (movement == 'L') then
+			snakeHead_x = snakeHead_x - 1;
+		else/if (movement == 'R') then
+			snakeHead_x = snakeHead_x + 1;
+		end
+	
+		var int pos = XY(snakeHead_x,snakeHead_y);
+		if(global:world[pos] == 'w' or global:world[pos] == 's') then		
+			global:world[pos] = 'c';			
+			_printf("your score = %d\n", score);		
+			await FOREVER;
+		else/if (global:world[pos] == 'r') then
+			if(global:active_hammer == 0) then
+				global:world[pos] = 'c';			
+				_printf("your score = %d\n", score);		
+				await FOREVER;
+			else
+				global:rock_count = global:rock_count + 1;
+				if ( global:rock_count == 5) then
+					global:active_hammer = 0;
+					global:rock_count = 0;
+				end
+			end
+		else/if (global:world[pos] == 'f') then		
+			emit comeu;
+			ate = 1;
+			score = score + 1;
+		else/if (global:world[pos] == 'h') then
+			global:active_hammer = 1;
+		end
+
+		global:world[pos] = 's';
+
+		if (global:active_hammer == 1) then
+			global:world[pos] = 'ss';  //super snake		
+		end
+
+		headIndex = headIndex + 1;
+		if (headIndex == ROWS_COLS) then
+			headIndex = 0;
+		end
+		global:snakeTrack_x[headIndex] = snakeHead_x;
+		global:snakeTrack_y[headIndex] = snakeHead_y;	
+
+		if (ate==0) then
+			var int pos_tail = XY(global:snakeTrack_x[tailIndex],global:snakeTrack_y[tailIndex]);		
+			global:world[pos_tail] = '\0';
+			tailIndex = tailIndex + 1;
+			if (tailIndex == ROWS_COLS) then
+				tailIndex = 0;
+			end
+		end
+		ate = 0;
+    end
+end
+
+
+loop i in MAX_ROWS-1 do		// initialize world
+	var int pos = XY(0,i); 
+	global:world[pos] = 'w';
+
+	block.x = 0;
+	block.y = i*BLOCK_HEIGHT;
+
+	pos = XY((MAX_COLS-1),i);
+	global:world[pos] = 'w';
+
+	block.x = (MAX_COLS-1)*BLOCK_WIDTH;
+	block.y = i*BLOCK_HEIGHT;
+end
+
+loop i in MAX_COLS-1 do
+	var int pos = XY(i,0);
+	global:world[pos] = 'w';
+
+	block.x = i*BLOCK_WIDTH;
+	block.y = 0;
+
+	pos = XY(i,(MAX_ROWS-1));
+	global:world[pos] = 'w';
+
+	block.x = i*BLOCK_WIDTH;
+	block.y = (MAX_ROWS-1)*BLOCK_HEIGHT;
+
+end
+
+
+// =====================          EXECUTION        ==============================
+
+var Snake naja with
+	this.movement = 'R';
+	this.ate = 0;
+	this.snakeHead_x = 2;
+	this.snakeHead_y = 2;
+	this.tailIndex = 0;
+	this.headIndex = 0;
+end;
+
+par/or do			// GAME LOOP
+    await SDL_QUIT;
+with
+	pool Rock[] rocks;
+	loop do
+		await naja.comeu;
+		spawn Rock in rocks with
+			this.rock_x = _rand()%38 + 1;
+			this.rock_y = _rand()%38 + 1;
+		end;
+	end
+with
+	// GENERATE FOOD
+	loop do
+		await naja.comeu;
+		native _rand();
+		loop i in ROWS_COLS do
+			var int food_x = (_rand()%(MAX_COLS-2)) + 1;
+			var int food_y = (_rand()%(MAX_ROWS-2)) + 1;
+
+			var int food_pos = XY(food_x,food_y);
+			if (global:world[food_pos] != 'w' and global:world[food_pos] != 's'and global:world[food_pos] != 'r') then
+				global:world[food_pos] = 'f';								
+				break;
+			end
+		end
+	end
+with
+	every SDL_REDRAW do
+		loop y in MAX_ROWS do
+			loop x in MAX_COLS do
+				var int pos = XY(x,y);		
+				block.x = x*BLOCK_WIDTH;
+				block.y = y*BLOCK_HEIGHT;
+				block.w = BLOCK_WIDTH;
+				block.h = BLOCK_HEIGHT;
+				if ( global:world[pos] == 'w') then
+					// paint wall
+					_SDL_SetRenderDrawColor(ren,wall_clr.r,wall_clr.g,wall_clr.b,0);
+					_SDL_RenderFillRect(ren,&block);
+				else/if (global:world[pos] == 'f') then
+					// paint food
+					block.w = 3*BLOCK_WIDTH/4;
+					block.h = 3*BLOCK_HEIGHT/4;
+					_SDL_SetRenderDrawColor(ren,food_clr.r,food_clr.g,food_clr.b,0);
+					_SDL_RenderFillRect(ren,&block);
+				else/if (global:world[pos] == 's') then
+					//paint snake
+					_SDL_SetRenderDrawColor(ren,snake_clr.r,snake_clr.g,snake_clr.b,0);
+					_SDL_RenderFillRect(ren,&block);
+				else/if (global:world[pos] == 'c') then
+					// paint collision
+					_SDL_SetRenderDrawColor(ren,0xFF,0x00,0x00,0);
+					_SDL_RenderFillRect(ren,&block);		
+				else/if (global:world[pos] == 'r') then
+					// paint rocks
+					_SDL_SetRenderDrawColor(ren,0xA0,0x00,0x00,0);
+					_SDL_RenderFillRect(ren,&block);
+				else
+					//paint bg
+					_SDL_SetRenderDrawColor(ren,bg_clr.r,bg_clr.g,bg_clr.b,0);
+					_SDL_RenderFillRect(ren,&block);
+				end
+			end
+		end
+ 	   _SDL_RenderPresent(ren);
+	end    
+end
+
+escape 0;
