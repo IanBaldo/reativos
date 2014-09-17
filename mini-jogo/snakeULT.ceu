@@ -21,6 +21,7 @@ var int[ROWS_COLS] snakeTrack_x;  // keeps track of the body position
 var int[ROWS_COLS] snakeTrack_y;
 var int rock_count = 0;
 var int active_hammer = 0;
+var int top_score = 0;
 
 var _SDL_Window* win;
     finalize
@@ -39,17 +40,18 @@ var _SDL_Renderer* ren;
         _SDL_DestroyRenderer(ren);
     end
 
-loop do
-	par/or do
-		// =====================         INITIALIZATION        ==============================
-
-		interface Global with
+	interface Global with
 			var char[ROWS_COLS] world;
 			var int[ROWS_COLS] snakeTrack_x;  // keeps track of the body position 
 			var int[ROWS_COLS] snakeTrack_y;
 			var int rock_count;
 			var int active_hammer;
+			var int top_score;
 		end;
+
+loop do
+	par/or do
+		// =====================         INITIALIZATION        ==============================
 
 		var _SDL_Rect bg;
 			bg.w = win_w;
@@ -149,15 +151,23 @@ loop do
 				end
 				var int pos = XY(snakeHead_x,snakeHead_y);
 				if(global:world[pos] == 'w' or global:world[pos] == 's' or global:world[pos] == 't') then		
-					global:world[pos] = 'c';			
-					_printf("\n\n>>> SCORE = %d\n", score);
+					global:world[pos] = 'c';	
+					if score > global:top_score then
+						global:top_score = score;
+					end	
+					_printf("\n\n\n\n>>> TOP SCORE: %d\n", global:top_score);	
+					_printf("> SCORE: %d\n", score);	
 					emit dead;		
 					await FOREVER;
 				else/if (global:world[pos] == 'r') then
 					if(global:active_hammer == 0) then
 						global:world[pos] = 'c';	
-						_printf("your score = %d\n", score);
-						emit dead;	
+					if score > global:top_score then
+						global:top_score = score;
+					end		
+					_printf("\n\n\n\n>>> TOP SCORE: %d\n", global:top_score);	
+					_printf("> SCORE: %d\n", score);
+						emit dead;
 						await FOREVER;
 					else
 						global:rock_count = global:rock_count + 1;
@@ -292,6 +302,7 @@ loop do
 			end
 		with
 			every SDL_REDRAW do
+				_printf("REDRAW\n");
 				loop y in MAX_ROWS do
 					loop x in MAX_COLS do
 						var int pos = XY(x,y);		
@@ -347,8 +358,11 @@ loop do
 			_printf("HIT ENTER TO RESTART \n");
 			global:active_hammer = 0;		// return to normal snake mode
 			var _SDL_KeyboardEvent* key;
-		
+		par/or do
+			await 30s;
+		with
 			key = await SDL_KEYDOWN until (key:keysym.sym == _SDLK_RETURN);
+		end			
 			emit restart;		
 			
 		end
