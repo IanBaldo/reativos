@@ -150,7 +150,7 @@ loop do
 				var int pos = XY(snakeHead_x,snakeHead_y);
 				if(global:world[pos] == 'w' or global:world[pos] == 's' or global:world[pos] == 't') then		
 					global:world[pos] = 'c';			
-					_printf(">>> SCORE = %d\n", score);
+					_printf("\n\n>>> SCORE = %d\n", score);
 					emit dead;		
 					await FOREVER;
 				else/if (global:world[pos] == 'r') then
@@ -173,6 +173,7 @@ loop do
 					score = score + 1;
 				else/if (global:world[pos] == 'h') then
 					global:active_hammer = 1;
+					global:rock_count = 0;
 				end
 
 				global:world[pos] = 's';
@@ -304,6 +305,8 @@ loop do
 							_SDL_RenderFillRect(ren,&block);
 						else/if (global:world[pos] == 'f') then
 							// paint food
+							block.x = (x*BLOCK_WIDTH) + (1*BLOCK_WIDTH/4);
+							block.y = (y*BLOCK_HEIGHT) + (1*BLOCK_HEIGHT/4);
 							block.w = 3*BLOCK_WIDTH/4;
 							block.h = 3*BLOCK_HEIGHT/4;
 							_SDL_SetRenderDrawColor(ren,food_clr.r,food_clr.g,food_clr.b,0);
@@ -324,6 +327,10 @@ loop do
 							_SDL_SetRenderDrawColor(ren,0xA0,0xA0,0x00,0);			// REQ UPDATES
 							_SDL_RenderFillRect(ren,&block);
 						else/if (global:world[pos] == 'h') then
+							block.x = (x*BLOCK_WIDTH) + (1*BLOCK_WIDTH/4);
+							block.y = (y*BLOCK_HEIGHT) + (1*BLOCK_HEIGHT/4);
+							block.w = 3*BLOCK_WIDTH/4;
+							block.h = 3*BLOCK_HEIGHT/4;
 							_SDL_SetRenderDrawColor(ren,0xFF,0xFF,0x00,0);			// REQ UPDATES
 							_SDL_RenderFillRect(ren,&block);
 						else
@@ -337,7 +344,7 @@ loop do
 			end
 		with
 			await naja.dead;
-			_printf("\n\n HIT ENTER TO RESTART \n");
+			_printf("HIT ENTER TO RESTART \n");
 			global:active_hammer = 0;		// return to normal snake mode
 			var _SDL_KeyboardEvent* key;
 		
