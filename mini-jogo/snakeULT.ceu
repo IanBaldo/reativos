@@ -2,6 +2,7 @@
 
 native _printf();
 
+#define SPEED	75
 #define BLOCK_WIDTH	15
 #define BLOCK_HEIGHT	15
 #define MAX_ROWS 	40
@@ -137,7 +138,13 @@ loop do
 			   			 end
 			   	 	end
 				with // timeout
-				await 50ms;
+
+				var int snake_speed = SPEED - 0.5*score;
+				if (snake_speed < 40 ) then
+					snake_speed = 40;
+				end
+
+				await (snake_speed)ms;
 				end
 				// keep moving
 				if (movement == 'U') then
@@ -281,7 +288,7 @@ loop do
 						this.hammer_y = _rand()%38 + 1;
 					end;
 				with
-					await 30s;
+					await 45s;
 				end
 			end
 		with
@@ -302,7 +309,6 @@ loop do
 			end
 		with
 			every SDL_REDRAW do
-				_printf("REDRAW\n");
 				loop y in MAX_ROWS do
 					loop x in MAX_COLS do
 						var int pos = XY(x,y);		
